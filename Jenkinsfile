@@ -6,13 +6,13 @@ pipeline {
         GITHUB_CREDENTIALS = credentials('github-credentials')   // ID of GitHub credentials
         REGISTRY = 'docker.io'
         IMAGE_NAME = 'ayaqub300/cw2-server'
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        IMAGE_TAG = "${env.BUILD_NUMBER}.0" // Updated to include decimal
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master',
+                git branch: 'master', // Ensure 'master' is correct
                     credentialsId: 'github-credentials',
                     url: 'https://github.com/ashiiy2/devops-coursework.git'
             }
