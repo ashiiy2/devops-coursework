@@ -1,54 +1,27 @@
 pipeline {
     agent any
-    
-    // Environment variables and parameters
+
     environment {
+        DOCKER_CREDENTIALS = credentials('dockerhub-credentials') // ID of DockerHub credentials
+        GITHUB_CREDENTIALS = credentials('github-credentials')   // ID of GitHub credentials
         REGISTRY = 'docker.io'
         IMAGE_NAME = 'ayaqub300/cw2-server'
-        // Using BUILD_NUMBER for unique tagging
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        // Production tag for release
-        PROD_TAG = '1.0'
-        // Setting up Docker buildkit for better performance
-        DOCKER_BUILDKIT = '1'
-    }
-
-    // Pipeline options
-    options {
-        timestamps()  // Add timestamps to console output
-        timeout(time: 1, unit: 'HOURS')  // Pipeline timeout
-        disableConcurrentBuilds()  // Prevent parallel execution
-        ansiColor('xterm')  // Colored output
+        IMAGE_TAG = '1.0' // Fixed tag to overwrite existing one
     }
 
     stages {
         stage('Checkout') {
             steps {
-                script {
-                    try {
-                        git branch: 'master',
-                            credentialsId: 'github-credentials',
-                            url: 'https://github.com/ashiiy2/devops-coursework.git'
-                    } catch (Exception e) {
-                        error "Failed to checkout repository: ${e.getMessage()}"
-                    }
-                }
+                git branch: 'master', // Ensure 'master' is your default branch
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/ashiiy2/devops-coursework.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    try {
-                        // Build with both unique and production tags
-                        sh """
-                            docker build -t ${IMAGE_NAME}:${IMAGE_TAG} \
-                                       -t ${IMAGE_NAME}:${PROD_TAG} \
-                                       --build-arg BUILDKIT_INLINE_CACHE=1 .
-                        """
-                    } catch (Exception e) {
-                        error "Docker build failed: ${e.getMessage()}"
-                    }
+                    dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
                 }
             }
         }
@@ -56,27 +29,10 @@ pipeline {
         stage('Test Docker Image') {
             steps {
                 script {
-                    try {
-                        // Run container for testing
-                        sh """
-                            docker run -d --name test-container -p 8080:8080 ${IMAGE_NAME}:${IMAGE_TAG}
-                            sleep 10  # Wait for container to start
-                            
-                            # Test the endpoint
-                            RESPONSE=\$(curl -s http://localhost:8080/)
-                            echo "Service Response: \$RESPONSE"
-                            
-                            # Verify response contains expected string
-                            if [[ "\$RESPONSE" != *"DevOps Coursework 2"* ]]; then
-                                echo "Unexpected response from service"
-                                exit 1
-                            fi
-                        """
-                    } catch (Exception e) {
-                        error "Testing failed: ${e.getMessage()}"
-                    } finally {
-                        // Cleanup test container
-                        sh 'docker rm -f test-container || true'
+                    dockerImage.inside {
+                        sh 'node server.js &'
+                        sleep 10
+                        sh 'curl http://localhost:8080/'
                     }
                 }
             }
@@ -85,29 +41,20 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    try {
-                        withCredentials([usernamePassword(
-                            credentialsId: 'dockerhub-credentials',
-                            usernameVariable: 'DOCKER_USERNAME',
-                            passwordVariable: 'DOCKER_PASSWORD'
-                        )]) {
-                            // Login to Docker Hub securely
-                            sh '''
-                                echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                            '''
-                            
-                            // Push both tags
-                            sh """
-                                docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                                docker push ${IMAGE_NAME}:${PROD_TAG}
-                            """
-                        }
-                    } catch (Exception e) {
-                        error "Failed to push Docker image: ${e.getMessage()}"
-                    } finally {
-                        // Always logout from Docker
-                        sh 'docker logout'
+                    docker.withRegistry("https://${REGISTRY}", 'dockerhub-credentials') {
+                        dockerImage.push()
                     }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    sh """
+                    kubectl set image deployment/cw2-server-deployment cw2-server=${IMAGE_NAME}:${IMAGE_TAG} --record
+                    kubectl rollout status deployment/cw2-server-deployment
+                    """
                 }
             }
         }
@@ -115,30 +62,10 @@ pipeline {
 
     post {
         success {
-            script {
-                // Send success notification
-                echo "Pipeline completed successfully!"
-                // You can add Slack/Email notifications here
-            }
+            echo 'Pipeline completed successfully!'
         }
         failure {
-            script {
-                echo "Pipeline failed!"
-                // You can add Slack/Email notifications here
-            }
-        }
-        always {
-            script {
-                // Cleanup
-                try {
-                    sh """
-                        docker system prune -f
-                        docker image rm ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${PROD_TAG} || true
-                    """
-                } catch (Exception e) {
-                    echo "Cleanup failed: ${e.getMessage()}"
-                }
-            }
+            echo 'Pipeline failed.'
         }
     }
 }
