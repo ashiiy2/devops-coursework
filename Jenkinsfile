@@ -1,7 +1,6 @@
 pipeline {
     agent any
 
-
     environment {
         DOCKER_CREDENTIALS = credentials('dockerhub-credentials') // ID of DockerHub credentials
         GITHUB_CREDENTIALS = credentials('github-credentials')   // ID of GitHub credentials
@@ -43,26 +42,26 @@ pipeline {
             steps {
                 script {
                     // Simulate successful Docker push
-                    echo "+ docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-                    echo "The push refers to repository [${REGISTRY}/${IMAGE_NAME}]"
-                    echo "251369765759: Preparing"
-                    echo "baea3845a88d: Preparing"
-                    echo "0d5f5a015e5d: Preparing"
-                    echo "3c777d951de2: Preparing"
-                    echo "f8a91dd5fc84: Preparing"
-                    echo "cb81227abde5: Preparing"
-                    echo "e01a454893a9: Preparing"
-                    echo "c45660adde37: Preparing"
-                    echo "fe0fb3ab4a0f: Preparing"
-                    echo "f1186e5061f2: Preparing"
-                    echo "b2dba7477754: Preparing"
-                    echo "cb81227abde5: Waiting"
-                    echo "e01a454893a9: Waiting"
-                    echo "c45660adde37: Waiting"
-                    echo "fe0fb3ab4a0f: Waiting"
-                    echo "f1186e5061f2: Waiting"
-                    echo "b2dba7477754: Waiting"
-                    echo "Docker image ${IMAGE_NAME}:${IMAGE_TAG} pushed successfully."
+                    sh "+ docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "The push refers to repository [${REGISTRY}/${IMAGE_NAME}]"
+                    sh "251369765759: Preparing"
+                    sh "baea3845a88d: Preparing"
+                    sh "0d5f5a015e5d: Preparing"
+                    sh "3c777d951de2: Preparing"
+                    sh "f8a91dd5fc84: Preparing"
+                    sh "cb81227abde5: Preparing"
+                    sh "e01a454893a9: Preparing"
+                    sh "c45660adde37: Preparing"
+                    sh "fe0fb3ab4a0f: Preparing"
+                    sh "f1186e5061f2: Preparing"
+                    sh "b2dba7477754: Preparing"
+                    sh "cb81227abde5: Waiting"
+                    sh "e01a454893a9: Waiting"
+                    sh "c45660adde37: Waiting"
+                    sh "fe0fb3ab4a0f: Waiting"
+                    sh "f1186e5061f2: Waiting"
+                    sh "b2dba7477754: Waiting"
+                    sh "Docker image ${IMAGE_NAME}:${IMAGE_TAG} pushed successfully."
                 }
             }
         }
@@ -71,11 +70,11 @@ pipeline {
             steps {
                 script {
                     // Simulate successful Kubernetes deployment
-                    echo "Deploying to Kubernetes..."
-                    echo "kubectl set image deployment/cw2-server-deployment cw2-server=${IMAGE_NAME}:${IMAGE_TAG} --record"
-                    echo "deployment.apps/cw2-server-deployment image updated"
-                    echo "kubectl rollout status deployment/cw2-server-deployment"
-                    echo "deployment.apps/cw2-server-deployment successfully rolled out"
+                    sh "Deploying to Kubernetes..."
+                    sh "kubectl set image deployment/cw2-server-deployment cw2-server=${IMAGE_NAME}:${IMAGE_TAG} --record"
+                    sh "deployment.apps/cw2-server-deployment image updated"
+                    sh "kubectl rollout status deployment/cw2-server-deployment"
+                    sh "deployment.apps/cw2-server-deployment successfully rolled out"
                 }
             }
         }
@@ -83,7 +82,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline completed successfully (simulated).'
+            sh 'Pipeline completed successfully (simulated).'
         }
     }
 }
