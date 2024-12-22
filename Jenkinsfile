@@ -6,7 +6,7 @@ pipeline {
         GITHUB_CREDENTIALS = credentials('github-credentials')   // ID of GitHub credentials
         REGISTRY = 'docker.io'
         IMAGE_NAME = 'ayaqub300/cw2-server'
-        IMAGE_TAG = "${env.BUILD_NUMBER}.0" // Updated to include decimal
+        IMAGE_TAG = '1.0' // Fixed tag
     }
 
     stages {
